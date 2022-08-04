@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "mlflow>=1.20.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlflow_wrapper"
+version = "0.0.1.2"
+authors = [
+  { name="Exitare", email="exitare@exitare.de" },
+]
+description = "A mlflow wrapper for easier handling of runs and experiments"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Exitare/mlflow-wrapper"
+"Bug Tracker" = "https://github.com/Exitare/mlflow-wrapper/issues"
