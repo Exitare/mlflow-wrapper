@@ -112,6 +112,8 @@ class TestRunHandler(unittest.TestCase):
         shutil.rmtree(store_folder)
         shutil.rmtree(save_path)
 
+        run_handler.delete_runs_and_child_runs(experiment_id=experiment_id, run_name=run_name)
+
 
 if __name__ == '__main__':
     unittest.main()
