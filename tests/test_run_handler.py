@@ -21,14 +21,14 @@ class TestRunHandler(unittest.TestCase):
         experiment_id: str = experiment_handler.get_experiment_id_by_name(experiment_name="Library Test Experiment")
         run_name: str = "Test run"
 
-        run_handler.delete_runs_and_child_runs(experiment_id=experiment_id, run_name=run_name)
+        run_handler.delete_run(experiment_id=experiment_id, run_name=run_name)
         with mlflow.start_run(experiment_id=experiment_id, run_name=run_name) as run:
             mlflow.log_param("TestRun", 1)
 
         run: Run = run_handler.get_run_by_name(experiment_id=experiment_id, run_name=run_name)
         self.assertIsNotNone(run)
 
-        run_handler.delete_runs_and_child_runs(experiment_id=experiment_id, run_name=run_name)
+        run_handler.delete_run(experiment_id=experiment_id, run_name=run_name)
 
     def test_get_run_by_id(self):
         run_handler: RunHandler = RunHandler()
@@ -43,7 +43,7 @@ class TestRunHandler(unittest.TestCase):
         run: Run = run_handler.get_run_by_id(experiment_id=experiment_id, run_id=run.info.run_id)
         self.assertIsNotNone(run)
 
-        run_handler.delete_runs_and_child_runs(experiment_id=experiment_id, run_name=run_name)
+        run_handler.delete_run(experiment_id=experiment_id, run_name=run_name)
 
     def test_get_run_id_by_name(self):
         run_handler: RunHandler = RunHandler()
@@ -58,7 +58,7 @@ class TestRunHandler(unittest.TestCase):
         run_id: str = run_handler.get_run_id_by_name(experiment_id=experiment_id, run_name=run_name)
         self.assertIsNotNone(run_id)
 
-        run_handler.delete_runs_and_child_runs(experiment_id=experiment_id, run_name=run_name)
+        run_handler.delete_run(experiment_id=experiment_id, run_name=run_name)
 
     def test_get_run_and_child_runs(self):
         run_handler: RunHandler = RunHandler()
@@ -73,10 +73,12 @@ class TestRunHandler(unittest.TestCase):
             with mlflow.start_run(experiment_id=experiment_id, run_name="child_run", nested=True) as child_run:
                 mlflow.log_param("Child Run", 1)
 
-        runs: List = run_handler.get_run_and_child_runs(experiment_id=experiment_id, run_name=run_name)
+        runs: List = run_handler.get_run(experiment_id=experiment_id, run_name=run_name, include_children=True)
         self.assertEqual(2, len(runs))
 
-        run_handler.delete_runs_and_child_runs(experiment_id=experiment_id, run_name=run_name)
+        run_handler.delete_run(experiment_id=experiment_id, run_name=run_name)
+        runs: List = run_handler.get_run(experiment_id=experiment_id, run_name=run_name, include_children=True)
+        self.assertEqual(0, len(runs))
 
     def test_download_artifacts(self):
         run_handler: RunHandler = RunHandler()
@@ -112,7 +114,7 @@ class TestRunHandler(unittest.TestCase):
         shutil.rmtree(store_folder)
         shutil.rmtree(save_path)
 
-        run_handler.delete_runs_and_child_runs(experiment_id=experiment_id, run_name=run_name)
+        run_handler.delete_run(experiment_id=experiment_id, run_name=run_name)
 
 
 if __name__ == '__main__':

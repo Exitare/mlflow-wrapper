@@ -24,7 +24,7 @@ class TestUploadHandler(unittest.TestCase):
             upload_handler.upload_dataframe(data=pd.DataFrame(columns=['A', 'B']), file_name="Test Upload.csv")
 
         time.sleep(1)
-        run_handler.delete_runs_and_child_runs(experiment_id=experiment_id, run_name="Upload Test")
+        run_handler.delete_run(experiment_id=experiment_id, run_name="Upload Test")
 
         shutil.rmtree(save_path)
 
@@ -47,7 +47,7 @@ class TestUploadHandler(unittest.TestCase):
             upload_handler.upload_file(file_name="test.csv")
 
         time.sleep(1)
-        run_handler.delete_runs_and_child_runs(experiment_id=experiment_id, run_name=run_name)
+        run_handler.delete_run(experiment_id=experiment_id, run_name=run_name)
 
         shutil.rmtree(save_path)
 

@@ -124,13 +124,14 @@ class RunHandler:
         # Run not found
         return None
 
-    def get_run_and_child_runs(self, experiment_id: str, run_name: str) -> List:
+    def get_run(self, experiment_id: str, run_name: str, include_children: bool = True) -> List:
         """
         Get all runs for a specific experiment id and run name.
         Key is the parent run, values are the children runs
         @param experiment_id:
         @param run_name:
-        @return: Returns a dictionary with the parent run as key and the children runs as values
+        @param include_children:
+        @return: Returns a list of runs. The first run is the parent run
         Values returns are run objects
         """
 
@@ -141,7 +142,12 @@ class RunHandler:
             return runs
 
         parent_run: Run = self._client.get_run(parent_run_id)
-        runs.append(parent_run)
+
+        if parent_run.info.lifecycle_stage == 'active':
+            runs.append(parent_run)
+
+        if not include_children:
+            return runs
 
         # Run not cached
         all_run_infos: [] = reversed(self._client.list_run_infos(experiment_id))
@@ -155,18 +161,30 @@ class RunHandler:
 
         return runs
 
-    def delete_runs_and_child_runs(self, experiment_id: str, run_name: str):
+    def delete_run(self, experiment_id: str, run_name: str, delete_children: bool = True):
+        """
+        Deletes the run with the given name. If multiple runs share the same name, only the first one is being deleted
+        :param experiment_id: The experiment id where the run located
+        :param run_name: The run name to be deleted
+        :param delete_children: Should the children runs also be deleted?
+        :return:
+        """
+        try:
+            if delete_children:
+                runs: List = self.get_run(experiment_id=experiment_id, run_name=run_name, include_children=True)
+            else:
+                runs: List = [self.get_run_by_name(experiment_id=experiment_id, run_name=run_name)]
 
-        runs: List = self.get_run_and_child_runs(experiment_id=experiment_id, run_name=run_name)
-
-        if len(runs) != 0:
-            for run in runs:
-                run: Run
-                # Remove run from local cache
-                self.__runs.pop(run.info.run_id, None)
-                # Delete run from mlflow
-                if run.info.lifecycle_stage == 'active':
-                    self._client.delete_run(run.info.run_id)
+            if len(runs) != 0:
+                for run in runs:
+                    run: Run
+                    # Remove run from local cache
+                    self.__runs.pop(run.info.run_id, None)
+                    # Delete run from mlflow
+                    if run.info.lifecycle_stage == 'active':
+                        self._client.delete_run(run.info.run_id)
+        except:
+            raise
 
     def download_artifacts(self, save_path: Union[Path, str], run: Run = None, runs: [] = None,
                            mlflow_folder: str = None) -> dict:

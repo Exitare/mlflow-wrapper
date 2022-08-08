@@ -41,7 +41,7 @@ run_handler: RunHandler = RunHandler()
 # Does only delete the first occurence of the given run name. If multiple runs do have the same name,
 # this command needs to be executed multiple times
 
-run_handler.delete_runs_and_child_runs(experiment_id=exp_id, run_name="My Run")
+run_handler.delete_run(experiment_id=exp_id, run_name="My Run")
 
 
 ```
