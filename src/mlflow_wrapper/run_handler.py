@@ -1,7 +1,7 @@
 from mlflow.entities import Run, RunInfo
 from typing import Optional, Dict, List, Union
 from pathlib import Path
-from folder_management import FolderManagement
+from mlflow_wrapper.folder_management import FolderManagement
 import mlflow
 
 
