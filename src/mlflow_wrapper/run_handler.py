@@ -3,11 +3,12 @@ from typing import Optional, Dict, List, Union
 from pathlib import Path
 from mlflow_wrapper.folder_management import FolderManagement
 import mlflow
+import sys
 
 
 class RunHandler:
     # Cache for already downloaded runs
-    __runs: dict = {}
+    # __runs: dict = {}
 
     def __init__(self, client=None, tracking_url: str = "http://127.0.0.1:5000"):
 
@@ -30,13 +31,6 @@ class RunHandler:
         return None
 
     def get_run_by_id(self, experiment_id: str, run_id: str) -> Optional[Run]:
-        # Get all cached runs
-        cached_runs: List = self.__runs.get(experiment_id)
-
-        if cached_runs is not None and len(cached_runs) != 0:
-            for cached_run in cached_runs:
-                if cached_run.info.run_id == run_id:
-                    return cached_run
 
         # Find run from mlflow
         all_run_infos: [] = reversed(self._client.list_run_infos(experiment_id))
@@ -46,10 +40,56 @@ class RunHandler:
             full_run = self._client.get_run(run_info.run_id)
 
             if full_run.info.run_id == run_id:
-                self.__add_run_to_cache(runs=cached_runs, experiment_id=experiment_id, run=full_run)
+                # self.__add_run_to_cache(runs=cached_runs, experiment_id=experiment_id, run=full_run)
                 return full_run
 
         return None
+
+    def get_run_by_metric(self, experiment_id: str, metric: str, mode: str = None) -> Optional[Run]:
+        """
+        Returns a run by the given metric
+        :param experiment_id:
+        :param metric:
+        :param mode: The mode of search. Available params: Min, Max, None
+        If no mode is provided, the first occurence of the metric is being returned.
+        If min /max is specified, the run with either the minimum or maximum of the metric is being returned
+        :return: A run if found else None
+        """
+
+        mode = mode.lower() if mode is not None and len(mode) > 0 else None
+        all_run_infos: reversed = reversed(self._client.list_run_infos(experiment_id=experiment_id))
+        threshold: float = sys.float_info.max if mode == "min" else sys.float_info.min
+
+        found_run: Run = None
+
+        run_info: RunInfo
+        for run_info in all_run_infos:
+            full_run: Run
+            full_run = self._client.get_run(run_info.run_id)
+            metric_value: float = 0
+
+            if mode == "min" or mode == "max":
+                try:
+                    metric_value = float(full_run.data.metrics.get(metric))
+                except ValueError:
+                    print(f"Metric {metric} can not be converted")
+                    return None
+
+            if mode == "min":
+                if metric_value < threshold:
+                    found_run = full_run
+                    threshold = metric_value
+
+            elif mode == "max":
+                if metric_value > threshold:
+                    found_run = full_run
+                    threshold = metric_value
+
+            else:
+                if full_run.data.metrics.get(metric) is not None:
+                    return full_run
+
+        return found_run
 
     def get_run_id_by_name(self, experiment_id: str, run_name: str, parent_run_id: str = None) -> Optional[str]:
         """
@@ -62,12 +102,7 @@ class RunHandler:
         run: Run
 
         # Check cache
-        runs: List = self.__runs.get(experiment_id)
-
-        if runs is not None and len(runs) != 0:
-            for run in runs:
-                if run.data.tags.get('mlflow.runName') == run_name:
-                    return run.info.run_id
+        runs: List = []
 
         # Run not cached
         all_run_infos: reversed = reversed(self._client.list_run_infos(experiment_id=experiment_id))
@@ -80,8 +115,6 @@ class RunHandler:
                 if parent_run_id is not None and full_run.data.tags.get('mlflow.parentRunId') != parent_run_id:
                     continue
 
-                # Add to cache
-                self.__add_run_to_cache(runs=runs, experiment_id=experiment_id, run=full_run)
                 return full_run.info.run_id
 
         # Run not found
@@ -99,7 +132,7 @@ class RunHandler:
         run_name = run_name.strip()
 
         # Check cache
-        runs: List = self.__runs.get(experiment_id)
+        runs: List = []
 
         if runs is not None and len(runs) != 0:
             for run in runs:
@@ -116,8 +149,6 @@ class RunHandler:
             if full_run.data.tags.get('mlflow.runName') == run_name:
                 if parent_run_id is not None and full_run.data.tags.get('mlflow.parentRunId') != parent_run_id:
                     continue
-                # Add to cache
-                self.__add_run_to_cache(runs=runs, experiment_id=experiment_id, run=full_run)
 
                 return full_run
 
@@ -178,8 +209,7 @@ class RunHandler:
             if len(runs) != 0:
                 for run in runs:
                     run: Run
-                    # Remove run from local cache
-                    self.__runs.pop(run.info.run_id, None)
+
                     # Delete run from mlflow
                     if run.info.lifecycle_stage == 'active':
                         self._client.delete_run(run.info.run_id)
@@ -237,10 +267,3 @@ class RunHandler:
                 continue
         print("Download complete.")
         return created_directories
-
-    def __add_run_to_cache(self, runs: List, experiment_id: str, run: Run):
-        # Add to cache
-        if runs is None or len(runs) == 0:
-            self.__runs[experiment_id] = [run]
-        else:
-            self.__runs[experiment_id].append(run)

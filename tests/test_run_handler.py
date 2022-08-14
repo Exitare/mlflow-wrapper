@@ -10,6 +10,7 @@ import time
 from typing import Dict, List
 import shutil
 from pathlib import Path
+import time
 
 
 class TestRunHandler(unittest.TestCase):
@@ -78,6 +79,47 @@ class TestRunHandler(unittest.TestCase):
 
         run_handler.delete_run(experiment_id=experiment_id, run_name=run_name)
         runs: List = run_handler.get_run(experiment_id=experiment_id, run_name=run_name, include_children=True)
+        self.assertEqual(0, len(runs))
+
+    @parameterized.expand([
+        ("Max"),
+        ("Min"),
+        (None,)
+    ])
+    def test_find_by_metric(self, mode: str):
+        run_handler: RunHandler = RunHandler()
+        experiment_handler: ExperimentHandler = ExperimentHandler()
+
+        experiment_id: str = experiment_handler.get_experiment_id_by_name(experiment_name="Library Test Experiment")
+        max_run_name: str = "Max Run"
+        min_run_name: str = "Min Run"
+
+        with mlflow.start_run(experiment_id=experiment_id, run_name=max_run_name) as run:
+            mlflow.log_metric("Test Metric", 5)
+
+        with mlflow.start_run(experiment_id=experiment_id, run_name=min_run_name) as run:
+            mlflow.log_metric("Test Metric", 2)
+
+        metric_run: Run = run_handler.get_run_by_metric(experiment_id=experiment_id, metric="Test Metric", mode=mode)
+
+        if mode == "Max":
+            self.assertIsNotNone(metric_run)
+            self.assertEqual(metric_run.data.tags.get('mlflow.runName'), max_run_name)
+
+        elif mode == "Min":
+            self.assertIsNotNone(metric_run)
+            self.assertEqual(metric_run.data.tags.get('mlflow.runName'), min_run_name)
+
+        else:
+            self.assertIsNotNone(metric_run)
+
+
+        run_handler.delete_run(experiment_id=experiment_id, run_name=max_run_name, delete_children=True)
+        run_handler.delete_run(experiment_id=experiment_id, run_name=min_run_name, delete_children=True)
+        runs: List = run_handler.get_run(experiment_id=experiment_id, run_name=max_run_name, include_children=True)
+        self.assertEqual(0, len(runs))
+
+        runs: List = run_handler.get_run(experiment_id=experiment_id, run_name=min_run_name, include_children=True)
         self.assertEqual(0, len(runs))
 
     def test_download_artifacts(self):
